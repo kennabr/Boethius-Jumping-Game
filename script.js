@@ -16,6 +16,7 @@ let lessons = [
     { text: "The universe is governed by God.", correct: true }
 ];
 let lessonDisplay = ""; // Text to display for lessons
+let cameraOffsetY = 0; // Used to simulate upward progression
 
 // Background images
 const playerImg = new Image();
@@ -38,22 +39,23 @@ function createPrisonPlatforms() {
 }
 
 function createMainGamePlatforms() {
-    platforms = [];
-    for (let i = 0; i < 5; i++) {
-        let correctIndex = Math.floor(Math.random() * 3); // One correct platform per level
-        for (let j = 0; j < 3; j++) {
-            platforms.push({
-                x: 100 + j * 200,
-                y: 500 - i * 150,
-                width: 150,
-                height: 20,
-                color: j === correctIndex ? "green" : "red", // Green for correct, red for incorrect
-                lesson: lessons[i % lessons.length].text,
-                correct: j === correctIndex
-            });
-        }
-    }
-    console.log("Main game platforms created.");
+    platforms = [
+        { x: 100, y: 400, width: 150, height: 20, label: "Wealth will make me happy", correct: false, color: "white" },
+        { x: 300, y: 300, width: 150, height: 20, label: "True happiness comes from within", correct: true, color: "white" },
+        { x: 500, y: 200, width: 150, height: 20, label: "Power will bring me joy", correct: false, color: "white" }
+    ];
+    console.log("Initial main game platforms created:", platforms);
+}
+
+function addNewPlatforms() {
+    const baseY = Math.min(...platforms.map(p => p.y)) - 200; // Find the highest platform and add 200px above it
+    const newPlatforms = [
+        { x: 150, y: baseY, width: 150, height: 20, label: "Fortune is unpredictable", correct: true, color: "white" },
+        { x: 300, y: baseY - 100, width: 150, height: 20, label: "Evil is powerless without goodness", correct: true, color: "white" },
+        { x: 450, y: baseY - 200, width: 150, height: 20, label: "Power will bring me joy", correct: false, color: "white" }
+    ];
+    platforms.push(...newPlatforms);
+    console.log("New platforms added:", newPlatforms);
 }
 
 function initializeMainGame() {
@@ -63,6 +65,8 @@ function initializeMainGame() {
     player.y = 400;
     player.dx = 0; // Reset horizontal velocity
     player.dy = 0; // Reset vertical velocity
+    player.onGround = true; // Ensure player starts on the ground
+    cameraOffsetY = 0; // Reset camera offset
     gameState = "main"; // Switch to main game state
 }
 
@@ -84,13 +88,26 @@ function drawTransitionScene() {
 }
 
 function drawPlayer() {
-    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+    ctx.drawImage(playerImg, player.x, player.y - cameraOffsetY, player.width, player.height);
 }
 
-function drawPlatforms() {
+function drawPlatformsForPrison() {
     platforms.forEach(platform => {
         ctx.fillStyle = platform.color;
         ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+    });
+}
+
+function drawPlatformsForMain() {
+    platforms.forEach(platform => {
+        // Draw platform
+        ctx.fillStyle = platform.color || "white"; // Default to white
+        ctx.fillRect(platform.x, platform.y - cameraOffsetY, platform.width, platform.height);
+
+        // Draw label above platform
+        ctx.fillStyle = "black";
+        ctx.font = "bold 16px Arial";
+        ctx.fillText(platform.label, platform.x + 10, platform.y - 10 - cameraOffsetY); // Label slightly above platform
     });
 }
 
@@ -98,7 +115,7 @@ function drawBackground() {
     if (gameState === "prison") {
         ctx.drawImage(prisonBackground, 0, 0, canvas.width, canvas.height);
     } else if (gameState === "main") {
-        ctx.drawImage(mainBackground, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(mainBackground, 0, -cameraOffsetY, canvas.width, canvas.height);
     }
 }
 
@@ -140,21 +157,71 @@ function updatePlayer() {
     }
 }
 
+function updatePlayerForMainGame() {
+    player.dy += gravity; // Apply gravity
+    player.y += player.dy; // Update vertical position
+    player.x += player.dx; // Update horizontal position
+
+    // Update camera offset
+    if (player.y < canvas.height / 2) {
+        cameraOffsetY = canvas.height / 2 - player.y;
+    }
+
+    // Prevent the player from moving out of bounds
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+    // Check for platform collisions
+    const platform = platforms.find(
+        p =>
+            player.x + player.width > p.x && // Player's right side overlaps platform
+            player.x < p.x + p.width && // Player's left side overlaps platform
+            player.y + player.height <= p.y && // Player is above platform
+            player.y + player.height + player.dy >= p.y // Player is falling onto platform
+    );
+
+    if (platform) {
+        player.dy = 0; // Stop falling
+        player.y = platform.y - player.height; // Place player on top of platform
+        player.onGround = true;
+
+        if (platform.correct && platform.color === "white") {
+            platform.color = "green"; // Turn correct platform green
+            addNewPlatforms(); // Add new platforms
+        } else if (!platform.correct) {
+            platform.color = "red"; // Turn incorrect platform red
+            setTimeout(() => {
+                platforms = platforms.filter(p => p !== platform); // Remove incorrect platform
+            }, 500); // Remove platform after a short delay
+        }
+    } else {
+        player.onGround = false; // Player is in the air
+    }
+
+    // If the player falls to the ground
+    if (player.y + player.height >= canvas.height) {
+        player.dy = 0;
+        player.y = canvas.height - player.height; // Reset to ground
+        player.onGround = true;
+    }
+}
+
 // Game loop
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === "prison") {
         drawBackground();
-        drawPlatforms();
+        drawPlatformsForPrison();
         drawPlayer();
         updatePlayer();
     } else if (gameState === "transition") {
         drawTransitionScene();
     } else if (gameState === "main") {
         drawBackground();
-        drawPlatforms();
+        drawPlatformsForMain(); // Draw platforms for main game
         drawPlayer();
+        updatePlayerForMainGame(); // Use updated player logic for the main game
     }
 
     requestAnimationFrame(gameLoop);
