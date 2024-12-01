@@ -17,7 +17,7 @@ let lessons = [
     { text: "Fortune is unpredictable.", correct: true },
     { text: "Virtue is its own reward.", correct: true },
     { text: "Material goods bring happiness.", correct: false },
-    { text: "Unity with God is key.", correct: true },
+    { text: "Unity with God is key", correct: true },
     { text: "Justice is necessary for happiness.", correct: true }
 ];
 
@@ -43,15 +43,69 @@ function createPrisonPlatforms() {
 
 function createMainGamePlatforms() {
     platforms = [
-        { x: 50, y: 500, width: 120, height: 15, label: "Wealth will make me happy", correct: false, color: "white" },
-        { x: 250, y: 400, width: 120, height: 15, label: "True happiness comes from within", correct: true, color: "white" },
-        { x: 450, y: 300, width: 120, height: 15, label: "Power will bring me joy", correct: false, color: "white" },
-        { x: 150, y: 200, width: 120, height: 15, label: "Fortune is unpredictable", correct: true, color: "white" },
-        { x: 350, y: 100, width: 120, height: 15, label: "Virtue is its own reward", correct: true, color: "white" },
-        { x: 550, y: 50, width: 120, height: 15, label: "Unity with God is key.", correct: true, color: "white" }
+        {
+            x: 50,
+            y: 500,
+            width: 120,
+            height: 15,
+            label: "Wealth will make me happy",
+            correct: false,
+            color: "white",
+            support: { x: 50, y: 500, width: 120, height: 15, color: "transparent" }
+        },
+        {
+            x: 250,
+            y: 400,
+            width: 120,
+            height: 15,
+            label: "Evil is powerless",
+            correct: true,
+            color: "white",
+            support: { x: 250, y: 400, width: 120, height: 15, color: "transparent" }
+        },
+        {
+            x: 450,
+            y: 300,
+            width: 120,
+            height: 15,
+            label: "Power will bring me joy",
+            correct: false,
+            color: "white",
+            support: { x: 450, y: 300, width: 120, height: 15, color: "transparent" }
+        },
+        {
+            x: 150,
+            y: 200,
+            width: 120,
+            height: 15,
+            label: "Fortune is unpredictable",
+            correct: true,
+            color: "white",
+            support: { x: 150, y: 200, width: 120, height: 15, color: "transparent" }
+        },
+        {
+            x: 350,
+            y: 100,
+            width: 120,
+            height: 15,
+            label: "True happiness comes from within",
+            correct: true,
+            color: "white",
+            support: { x: 350, y: 100, width: 120, height: 15, color: "transparent" }
+        },
+        {
+            x: 550,
+            y: 50,
+            width: 120,
+            height: 15,
+            label: "Unity with God is key",
+            correct: true,
+            color: "white",
+            support: { x: 550, y: 50, width: 120, height: 15, color: "transparent" }
+        }
     ];
-    console.log("Main game platforms created.");
 }
+
 
 function initializeMainGame() {
     console.log("Initializing main game...");
@@ -178,10 +232,9 @@ function updatePlayerForPrison() {
 }
 
 // Update functions for main game
+// Update functions for main game
 function updatePlayerForMainGame() {
     player.dy += gravity;
-    player.y += player.dy;
-    player.x += player.dx;
 
     const platform = platforms.find(
         p =>
@@ -196,12 +249,22 @@ function updatePlayerForMainGame() {
         player.y = platform.y - player.height;
         player.onGround = true;
 
-        if (platform.correct && platform.label === "Unity with God is key.") {
+        // Change platform color based on correctness
+        if (platform.color === "white") { // Change color only if it hasn't already changed
+            platform.color = platform.correct ? "green" : "red";
+        }
+
+        // Check for transition to next scene
+        if (platform.label === "Unity with God is key") {
+            console.log("Reached the top platform! Switching to transition scene.");
             gameState = "transition2";
         }
     } else {
         player.onGround = false;
     }
+
+    player.y += player.dy;
+    player.x += player.dx;
 
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
@@ -212,6 +275,21 @@ function updatePlayerForMainGame() {
         player.onGround = true;
     }
 }
+
+
+function drawPlatformsForMain() {
+    platforms.forEach(platform => {
+        // Draw the visible platform
+        ctx.fillStyle = platform.color || "white";
+        ctx.fillRect(platform.x, platform.y - cameraOffsetY, platform.width, platform.height);
+
+        // Draw the label directly on the visible platform
+        ctx.fillStyle = "black";
+        ctx.font = "bold 12px Arial";
+        ctx.fillText(platform.label, platform.x + 5, platform.y - 5 - cameraOffsetY);
+    });
+}
+
 
 // Game loop
 function gameLoop() {
